@@ -14,7 +14,7 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
 }
@@ -38,25 +38,28 @@ export const useAuthStore = create<AuthState>()(
       login: async (username, password) => {
         set({ isLoading: true, error: null });
 
-        // Simulasi network delay
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        const APP_ID = "4C3C6A87-FB00-4B28-A52C-285FFA4FDE06";
+        const REST_KEY = "5E0DC19F-886B-48AA-B11A-C7E517341F11";
+        const TABLE_NAME = "user-auth";
 
-        const found = MOCK_USERS.find(
-          (u) => u.username === username && u.password === password
-        );
+        const url = `https://api.backendless.com/${APP_ID}/${REST_KEY}/data/${TABLE_NAME}?where=username%3D%27${username}%27%20AND%20password%3D%27${password}%27`;
+        try {
+          const res = await fetch(url, {
+            method: "GET",
+          });
+          const result = await res.json();
+          console.log(result);
+          if (result.length === 0)
+            throw new Error("Username atau password salah");
 
-        if (found) {
-          set({
-            user: { username: found.username },
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-          });
-        } else {
-          set({
-            isLoading: false,
-            error: "Username atau password salah",
-          });
+          set({ user: result[0], isAuthenticated: true, error: null });
+          return true; // Berhasil
+        } catch (err: any) {
+          console.log(err);
+          set({ error: err.message });
+          return false; // Gagal
+        } finally {
+          set({ isLoading: false });
         }
       },
 
@@ -79,6 +82,6 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );

@@ -1,4 +1,4 @@
-import { LoginForm } from "./components/LoginForm";
+import AuthPage from "./components/AuthPage";
 import { TodoInput } from "./components/TodoInput";
 import { useTodo } from "./hooks/useTodo";
 import { useAuthStore } from "./store/useAuthStore";
@@ -21,7 +21,7 @@ export default function App() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
-  if (!isAuthenticated) return <LoginForm />;
+  if (!isAuthenticated) return <AuthPage />;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
