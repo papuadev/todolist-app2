@@ -1,0 +1,20 @@
+[
+  {
+    "id": "mop05g04670zv3940ld",
+    "text": "Belajar",
+    "completed": "false",
+    "createdAt": 1777766294596
+  },
+  {
+    "id": "mop05trjg2emuuq1si",
+    "text": "Menulis",
+    "completed": "false",
+    "createdAt": 1777766312431
+  },
+  {
+    "id": "mopq77q5u4xsyovzj4",
+    "text": "Apa aja",
+    "completed": false,
+    "createdAt": 1777810047197
+  }
+]

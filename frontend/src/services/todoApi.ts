@@ -6,6 +6,7 @@ export const todoApi = {
   getAll: async () => {
     const res = await fetch(`${BASE_URL}/todos`);
     if (!res.ok) throw new Error("Gagal mengambil todos");
+
     return res.json();
   },
 
