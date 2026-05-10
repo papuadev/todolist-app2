@@ -3,10 +3,14 @@ import type { Todo } from "../types/todo";
 const BASE_URL = "http://localhost:3000";
 
 export const todoApi = {
-  getAll: async (search?: string) => {
-    const url = search
-      ? `${BASE_URL}/todos?search=${encodeURIComponent(search)}`
-      : `${BASE_URL}/todos`;
+  getAll: async (search?: string, sort?: string) => {
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+    if (sort) params.append("sort", sort);
+
+    const query = params.toString();
+    const url = query ? `${BASE_URL}/todos?${query}` : `${BASE_URL}/todos`;
+
     const res = await fetch(url);
     return res.json();
   },

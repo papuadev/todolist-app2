@@ -3,14 +3,18 @@ import pool from "../database/connection";
 
 export const getAllTodos = async (req: Request, res: Response) => {
   try {
-    const { search } = req.query;
+    const { search, sort } = req.query;
+
+    const order = sort === "oldest" ? "ASC" : "DESC";
 
     const result = search
       ? await pool.query(
-          "SELECT * FROM tb_todos WHERE text ILIKE $1 ORDER BY created_at DESC;",
+          `SELECT * FROM tb_todos WHERE text ILIKE $1 ORDER BY created_at ${order};`,
           [`%${search}%`],
         )
-      : await pool.query("SELECT * FROM tb_todos ORDER BY created_at DESC;");
+      : await pool.query(
+          `SELECT * FROM tb_todos ORDER BY created_at ${order};`,
+        );
 
     res.status(200).json(result.rows);
   } catch (error) {

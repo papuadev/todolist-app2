@@ -39,12 +39,11 @@ export const useAuthStore = create<AuthState>()(
           });
 
           const result = await res.json();
-          console.log(result);
 
           if (!res.ok)
             throw new Error(result.message || "Username atau password salah");
 
-          set({ user: result, isAuthenticated: true, error: null });
+          set({ user: result.data, isAuthenticated: true, error: null });
           return true;
         } catch (err: any) {
           console.log(err);

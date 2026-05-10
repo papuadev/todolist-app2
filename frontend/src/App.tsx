@@ -5,7 +5,6 @@ import { useAuthStore } from "./store/useAuthStore";
 
 export default function App() {
   const {
-    todos,
     addTodo,
     toggleTodo,
     deleteTodo,
@@ -83,7 +82,7 @@ export default function App() {
           </button>
         </div>
 
-        <p className="text-xs text-gray-400">{todos.length} task</p>
+        <p className="text-xs text-gray-400">{displayTodos.length} task</p>
 
         {/* Todo List */}
         <div className="flex flex-col gap-2">

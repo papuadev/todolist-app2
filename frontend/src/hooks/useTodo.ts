@@ -18,7 +18,7 @@ export function useTodo() {
     const fetchTodos = async () => {
       try {
         setIsLoading(true);
-        const data = await todoApi.getAll(debouncedSearch);
+        const data = await todoApi.getAll(debouncedSearch, sortOrder);
         setTodos(data);
       } catch (err) {
         setError("Gagal memuat todos");
@@ -29,7 +29,7 @@ export function useTodo() {
     };
 
     fetchTodos();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, sortOrder]);
 
   async function addTodo(text: string): Promise<void> {
     try {
@@ -67,23 +67,16 @@ export function useTodo() {
     }
   }
 
-  const displayTodos = todos
-    .filter((item) => {
-      if (filter === "active") return !item.completed;
-      if (filter === "completed") return item.completed;
-      return true;
-    })
-    .sort((a, b) => {
-      return sortOrder === "newest"
-        ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    });
+  const displayTodos = todos.filter((item) => {
+    if (filter === "active") return !item.completed;
+    if (filter === "completed") return item.completed;
+    return true;
+  });
   const toggleSortOrder = (): void => {
     setSortOrder(sortOrder === "newest" ? "oldest" : "newest");
   };
 
   return {
-    todos,
     addTodo,
     toggleTodo,
     deleteTodo,
@@ -91,7 +84,6 @@ export function useTodo() {
     setFilter,
     toggleSortOrder,
     sortOrder,
-    setSortOrder,
     displayTodos,
     searchQuery,
     setSearchQuery,
