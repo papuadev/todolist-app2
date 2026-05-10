@@ -1,94 +1,84 @@
 import type { Request, Response } from "express";
-import fs from "fs";
-import { fileURLToPath } from "url";
-import path from "path";
+import pool from "../database/connection";
 
-const filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(filename);
-
-const FILE_PATH = path.join(__dirname, "../json/data.json");
-
-export const getAllTodos = (req: Request, res: Response) => {
+export const getAllTodos = async (req: Request, res: Response) => {
   try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    res.status(200).json(JSON.parse(data));
+    const result = await pool.query("SELECT * FROM tb_todos;");
+    const todos = result.rows;
+    res.status(200).json(todos);
   } catch (error) {
-    res.status(500).json({ error: "Failed to read todos" });
+    res.status(500).json({ error: "Failed to read data" });
   }
 };
 
-export const createTodo = (req: Request, res: Response) => {
+export const createTodo = async (req: Request, res: Response) => {
   try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const todos = JSON.parse(data);
     const { text, completed } = req.body;
 
-    const newTodo = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      text,
-      completed,
-      createdAt: Date.now(),
-    };
-    todos.push(newTodo);
-    fs.writeFileSync(FILE_PATH, JSON.stringify(todos, null, 2));
+    const result = await pool.query(
+      "INSERT INTO tb_todos (text, completed) VALUES ($1, $2) RETURNING *;",
+      [text, completed],
+    );
+    const newTodo = result.rows[0];
     res.status(201).json(newTodo);
   } catch (error) {
     res.status(500).json({ error: "Failed to create todo" });
   }
 };
 
-export const getTodoById = (req: Request, res: Response) => {
+export const getTodoById = async (req: Request, res: Response) => {
   try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const todos = JSON.parse(data);
+    const id = req.params.id;
+    const result = await pool.query("SELECT * FROM tb_todos WHERE id = $1;", [
+      id,
+    ]);
+    const todos = result.rows;
 
-    const todo = todos.find((t: any) => t.id === req.params.id);
-    if (!todo) {
+    if (!todos.length) {
       return res.status(404).json({ error: "Todo not found" });
     }
-    res.status(200).json(todo);
+    res.status(200).json(todos);
   } catch (error) {
     res.status(500).json({ error: "Failed to read todo" });
   }
 };
 
-export const updateTodo = (req: Request, res: Response) => {
+export const updateTodo = async (req: Request, res: Response) => {
   try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const todos = JSON.parse(data);
+    const id = req.params.id;
+    const { text, completed } = req.body;
+    const result = await pool.query("SELECT * FROM tb_todos WHERE id = $1;", [
+      id,
+    ]);
+    const todos = result.rows;
 
-    const index = todos.findIndex((t: any) => t.id === req.params.id);
-    if (index === -1) {
+    if (!todos.length) {
       return res.status(404).json({ error: "Todo not found" });
     }
 
-    const updateTodo = {
-      ...todos[index],
-      ...req.body,
-      id: todos[index].id,
-      createdAt: todos[index].createdAt,
-    };
-    todos[index] = updateTodo;
-    fs.writeFileSync(FILE_PATH, JSON.stringify(todos, null, 2));
+    const updateResult = await pool.query(
+      "UPDATE tb_todos SET text = $1, completed = $2 WHERE id = $3 RETURNING *;",
+      [text, completed, id],
+    );
+    const updateTodo = updateResult.rows[0];
     res.status(200).json(updateTodo);
   } catch (error) {
     res.status(500).json({ error: "Failed to update todo" });
   }
 };
 
-export const deleteTodo = (req: Request, res: Response) => {
+export const deleteTodo = async (req: Request, res: Response) => {
   try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const todos = JSON.parse(data);
+    const id = req.params.id;
+    const result = await pool.query(
+      "DELETE FROM tb_todos WHERE id = $1 RETURNING *;",
+      [id],
+    );
+    const deletedTodo = result.rows[0];
 
-    const index = todos.findIndex((t: any) => t.id === req.params.id);
-    if (index === -1) {
+    if (deletedTodo === undefined) {
       return res.status(404).json({ error: "Todo not found" });
     }
-
-    const deletedTodo = todos[index];
-    todos.splice(index, 1);
-    fs.writeFileSync(FILE_PATH, JSON.stringify(todos, null, 2));
     res.status(200).json({ message: "Todo deleted", data: deletedTodo });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete todo" });

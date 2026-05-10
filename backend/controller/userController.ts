@@ -1,110 +1,108 @@
 import type { Request, Response } from "express";
-import fs from "fs";
-import { fileURLToPath } from "url";
-import path from "path";
-
-const filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(filename);
-
-const FILE_PATH = path.join(__dirname, "../json/user.json");
-
-export const getAllUsers = (req: Request, res: Response) => {
+import pool from "../database/connection";
+import bcrypt from "bcrypt";
+export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    res.status(200).json(JSON.parse(data));
+    const result = await pool.query("SELECT * FROM tb_users;");
+    const users = result.rows;
+    res.send(200).json(users);
   } catch (error) {
-    res.status(500).json({ error: "Failed to read users" });
+    res.status(500).json({ error: "Failed to read data" });
   }
 };
 
-export const createUser = (req: Request, res: Response) => {
+export const createUser = async (req: Request, res: Response) => {
   try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const users = JSON.parse(data);
     const { username, email, password } = req.body;
-    const newUser = { username, email, password, createdAt: Date.now() };
-    users.push(newUser);
-    fs.writeFileSync(FILE_PATH, JSON.stringify(users, null, 2));
-    res.status(201).json(newUser);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to create user" });
-  }
-};
-
-export const getUserByUsername = (req: Request, res: Response) => {
-  try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const users = JSON.parse(data);
-    const { username } = req.params;
-    const user = users.find((u: any) => u.username === username);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.status(200).json(user);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to read user" });
-  }
-};
-
-export const updateUser = (req: Request, res: Response) => {
-  try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const users = JSON.parse(data);
-    const { username } = req.params;
-    const index = users.findIndex((u: any) => u.username === username);
-    if (index === -1) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    const { email, password } = req.body;
-    users[index] = { ...users[index], email, password };
-    fs.writeFileSync(FILE_PATH, JSON.stringify(users, null, 2));
-    res.status(200).json(users[index]);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to update user" });
-  }
-};
-
-export const deleteUser = (req: Request, res: Response) => {
-  try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const users = JSON.parse(data);
-    const { username } = req.params;
-    const index = users.findIndex((u: any) => u.username === username);
-    if (index === -1) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    users.splice(index, 1);
-    fs.writeFileSync(FILE_PATH, JSON.stringify(users, null, 2));
-    res.status(200).json({ message: "User deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to delete user" });
-  }
-};
-
-export const loginUser = (req: Request, res: Response) => {
-  try {
-    const data = fs.readFileSync(FILE_PATH, "utf8");
-    const users = JSON.parse(data);
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      res.status(400).json({ message: "Username dan password wajib diisi" });
-      return;
-    }
-
-    const user = users.find(
-      (u: any) => u.username === username && u.password === password,
+    const passwordHash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      "INSERT INTO tb_users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
+      [username, email, passwordHash],
     );
+    const newUser = result.rows[0];
+    res.status(200).json(newUser);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create data" });
+  }
+};
 
-    if (!user) {
-      res.status(401).json({ message: "Username atau password salah" });
-      return;
+export const getUserByUsername = async (req: Request, res: Response) => {
+  try {
+    const username = req.params.username;
+    const result = await pool.query(
+      "SELECT * FROM tb_users WHERE username = $1;",
+      [username],
+    );
+    const user = result.rows;
+    if (!user.length) {
+      return res.status(404).json({ message: "Data not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Failed to read data" });
+  }
+};
+
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const username = req.params.username;
+    const { email, password } = req.body;
+    const passwordHash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      "SELECT * FROM tb_users WHERE username = $1",
+      [username],
+    );
+    const user = result.rows;
+    if (!user.length) {
+      return res.status(404).json({ error: "Data not found" });
     }
 
-    // Jangan kirim password ke frontend
-    const { password: _, ...userWithoutPassword } = user;
+    const updateresult = await pool.query(
+      "UPDATE tb_users SET email = $1, password = $2 WHERE username = $3 RETURNING *;",
+      [email, passwordHash, username],
+    );
+    const updateUser = updateresult.rows[0];
+    res.status(200).json(updateUser);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update data" });
+  }
+};
 
-    res.status(200).json(userWithoutPassword);
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const username = req.params.username;
+    const result = await pool.query(
+      "DELETE FROM tb_users WHERE username = $1 RETURNING *;",
+      [username],
+    );
+    const deletedUser = result.rows[0];
+    if (deletedUser === undefined) {
+      return res.status(404).json({ error: "Data not found" });
+    }
+    res.status(200).json({ message: "Data deleted", data: deletedUser });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete data" });
+  }
+};
+
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+    const result = await pool.query(
+      "SELECT * FROM  tb_users WHERE username = $1;",
+      [username],
+    );
+    if (!result.rows.length) {
+      return res.status(401).json({ message: "Invalid username" });
+    }
+    const user = result.rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+    const { password: _, ...safeUser } = user;
+
+    res.status(200).json({ message: "Login successfully", data: safeUser });
   } catch (error) {
     res.status(500).json({ error: "Failed to login" });
   }
