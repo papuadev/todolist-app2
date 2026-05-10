@@ -107,7 +107,7 @@ export default function App() {
                   {item.text}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {new Date(item.createdAt).toLocaleString("id-ID")}
+                  {new Date(item.created_at).toLocaleString("id-ID")}
                 </p>
               </div>
               <span

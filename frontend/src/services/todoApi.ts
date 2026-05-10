@@ -3,13 +3,13 @@ import type { Todo } from "../types/todo";
 const BASE_URL = "http://localhost:3000";
 
 export const todoApi = {
-  getAll: async () => {
-    const res = await fetch(`${BASE_URL}/todos`);
-    if (!res.ok) throw new Error("Gagal mengambil todos");
-
+  getAll: async (search?: string) => {
+    const url = search
+      ? `${BASE_URL}/todos?search=${encodeURIComponent(search)}`
+      : `${BASE_URL}/todos`;
+    const res = await fetch(url);
     return res.json();
   },
-
   create: async (text: string) => {
     const res = await fetch(`${BASE_URL}/todos`, {
       method: "POST",

@@ -3,14 +3,20 @@ import pool from "../database/connection";
 
 export const getAllTodos = async (req: Request, res: Response) => {
   try {
-    const result = await pool.query("SELECT * FROM tb_todos;");
-    const todos = result.rows;
-    res.status(200).json(todos);
+    const { search } = req.query;
+
+    const result = search
+      ? await pool.query(
+          "SELECT * FROM tb_todos WHERE text ILIKE $1 ORDER BY created_at DESC;",
+          [`%${search}%`],
+        )
+      : await pool.query("SELECT * FROM tb_todos ORDER BY created_at DESC;");
+
+    res.status(200).json(result.rows);
   } catch (error) {
     res.status(500).json({ error: "Failed to read data" });
   }
 };
-
 export const createTodo = async (req: Request, res: Response) => {
   try {
     const { text, completed } = req.body;

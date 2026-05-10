@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Todo, FilterType, SortOrder } from "../types/todo";
 import { todoApi } from "../services/todoApi";
+import { useDebounce } from "use-debounce";
 
 export function useTodo() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -8,16 +9,16 @@ export function useTodo() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // ✅ Tambah state untuk loading & error
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Load todos dari API saat pertama mount
+  const [debouncedSearch] = useDebounce(searchQuery, 400);
+
   useEffect(() => {
     const fetchTodos = async () => {
       try {
         setIsLoading(true);
-        const data = await todoApi.getAll();
+        const data = await todoApi.getAll(debouncedSearch);
         setTodos(data);
       } catch (err) {
         setError("Gagal memuat todos");
@@ -28,9 +29,8 @@ export function useTodo() {
     };
 
     fetchTodos();
-  }, []); // Hanya sekali saat mount
+  }, [debouncedSearch]);
 
-  // ✅ addTodo: POST ke API
   async function addTodo(text: string): Promise<void> {
     try {
       const newTodo = await todoApi.create(text);
@@ -41,13 +41,15 @@ export function useTodo() {
     }
   }
 
-  // ✅ toggleTodo: PUT ke API
   async function toggleTodo(id: string): Promise<void> {
     const todo = todos.find((item) => item.id === id);
     if (!todo) return;
 
     try {
-      const updated = await todoApi.update(id, { completed: !todo.completed });
+      const updated = await todoApi.update(id, {
+        ...todo,
+        completed: !todo.completed,
+      });
       setTodos(todos.map((item) => (item.id === id ? updated : item)));
     } catch (err) {
       setError("Gagal mengupdate todo");
@@ -55,7 +57,6 @@ export function useTodo() {
     }
   }
 
-  // ✅ deleteTodo: DELETE ke API
   async function deleteTodo(id: string): Promise<void> {
     try {
       await todoApi.delete(id);
@@ -72,15 +73,11 @@ export function useTodo() {
       if (filter === "completed") return item.completed;
       return true;
     })
-    .filter((item) =>
-      item.text.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase()),
-    )
     .sort((a, b) => {
       return sortOrder === "newest"
-        ? b.createdAt - a.createdAt
-        : a.createdAt - b.createdAt;
+        ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-
   const toggleSortOrder = (): void => {
     setSortOrder(sortOrder === "newest" ? "oldest" : "newest");
   };
@@ -98,7 +95,7 @@ export function useTodo() {
     displayTodos,
     searchQuery,
     setSearchQuery,
-    isLoading, // ✅ expose ke komponen
-    error, // ✅ expose ke komponen
+    isLoading,
+    error,
   };
 }
